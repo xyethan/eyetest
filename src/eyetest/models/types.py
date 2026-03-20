@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
+
 
 @dataclass(frozen=True)
 class Ellipse2D:
@@ -41,3 +43,15 @@ class GazeEstimate:
 class CalibrationFrame:
     width_px: int
     height_px: int
+
+
+@dataclass(frozen=True)
+class BatchFrameOverlay:
+    frame_index: int
+    left_frame_bgr: np.ndarray
+    right_frame_bgr: np.ndarray
+    left_iris: Ellipse2D
+    right_iris: Ellipse2D
+    gaze: GazeEstimate
+    left_pupil: Ellipse2D | None = None
+    right_pupil: Ellipse2D | None = None

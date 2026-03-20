@@ -10,13 +10,13 @@ segmentation:
   input_width: 320
   align_width: true
   model_path: /mnt/c/Project/EllSeg/logs/ritnet_v3/teyed_large_exp2/checkpoints/checkpoint.pt
-  use_regressed_ellipses: false
+  use_regressed_ellipses: true
   segment_iris: true
-  segment_pupil: true
+  segment_pupil: false
   skip_ransac: false
 
 calibration:
-  path: configs/calibration.default.yaml
+  path: calibration.default.yaml
 
 outputs:
   save_overlay: true

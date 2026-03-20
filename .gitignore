@@ -5,8 +5,11 @@ build/
 dist/
 wheels/
 *.egg-info
-
+.superpowers/
 # Virtual environments
 .venv
 # doc
 docs/
+#video
+video/
+outputs/

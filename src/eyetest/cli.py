@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .config import load_app_config, load_calibration_config
-from .pipelines.batch_pipeline import run_batch_from_eye_videos
+from .pipelines.batch_pipeline import run_batch_from_face_video
 from .pipelines.realtime_pipeline import run_realtime_pipeline
 
 
@@ -15,15 +15,33 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=False)
 
     batch = subparsers.add_parser("batch")
-    batch.add_argument("--left-video", type=Path, required=True, help="Path to the left-eye video.")
-    batch.add_argument("--right-video", type=Path, required=True, help="Path to the right-eye video.")
+    batch.add_argument("--face-video", type=Path, required=True, help="Path to the face video.")
     batch.add_argument("--output-json", type=Path, default=Path("outputs/gaze-results.json"), help="Path to write batch gaze results.")
+    batch.add_argument("--output-video", type=Path, default=None, help="Path to write the gaze overlay video.")
+    batch.add_argument("--output-overlay-video", type=Path, default=None, help="Path to write the side-by-side overlay video.")
     batch.add_argument("--eval-on-cpu", action="store_true", help="Run EllSeg on CPU.")
 
     realtime = subparsers.add_parser("realtime")
     realtime.add_argument("--camera-index", type=int, default=0, help="Camera index.")
     realtime.add_argument("--eval-on-cpu", action="store_true", help="Run EllSeg on CPU.")
     return parser
+
+
+def resolve_calibration_path(calibration_path: str, config_path: Path) -> Path:
+    path = Path(calibration_path)
+    if path.is_absolute():
+        return path
+
+    candidates = [
+        (config_path.parent / path).resolve(),
+        (config_path.parent / path.name).resolve(),
+        (config_path.parent.parent / path).resolve(),
+        (Path.cwd() / path).resolve(),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -34,17 +52,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help()
         return 1
     app_config = load_app_config(args.config)
-    calibration_path = Path(app_config.calibration.path)
-    if not calibration_path.is_absolute():
-        calibration_path = (args.config.parent / calibration_path).resolve()
+    calibration_path = resolve_calibration_path(app_config.calibration.path, args.config.resolve())
     calibration = load_calibration_config(calibration_path)
     if command == "batch":
-        run_batch_from_eye_videos(
-            left_video_path=str(args.left_video),
-            right_video_path=str(args.right_video),
+        run_batch_from_face_video(
+            face_video_path=str(args.face_video),
             app_config=app_config,
             calibration=calibration,
             output_json_path=str(args.output_json),
+            output_video_path=str(args.output_video) if args.output_video is not None else None,
+            output_overlay_video_path=str(args.output_overlay_video) if args.output_overlay_video is not None else None,
             eval_on_cpu=bool(args.eval_on_cpu),
         )
     elif command == "realtime":

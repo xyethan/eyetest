@@ -12,6 +12,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 
+from eyetest.cli import resolve_calibration_path  # noqa: E402
 from eyetest.config import load_app_config, load_calibration_config  # noqa: E402
 
 
@@ -36,6 +37,17 @@ class ConfigLoadingTests(unittest.TestCase):
             path.write_text("screen_corners: []\n", encoding="utf-8")
             with self.assertRaises(ValueError):
                 load_calibration_config(path)
+
+    def test_resolves_default_calibration_path_relative_to_config_file(self) -> None:
+        app_config = load_app_config(PROJECT_ROOT / "configs" / "default.yaml")
+        resolved = resolve_calibration_path(
+            app_config.calibration.path,
+            PROJECT_ROOT / "configs" / "default.yaml",
+        )
+        self.assertEqual(
+            resolved,
+            PROJECT_ROOT / "configs" / "calibration.default.yaml",
+        )
 
 
 if __name__ == "__main__":

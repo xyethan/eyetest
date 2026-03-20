@@ -17,8 +17,8 @@ def preprocess_frame(
 
     if output_shape[1] != image.shape[1]:
         scale = output_shape[1] / image.shape[1]
-        width = int(image.shape[1] * scale)
-        height = int(image.shape[0] * scale)
+        width = output_shape[1]
+        height = max(int(round(image.shape[0] * scale)), 1)
         image = cv2.resize(image, (width, height), interpolation=cv2.INTER_LANCZOS4)
         if output_shape[0] > image.shape[0]:
             pad_height = output_shape[0] - image.shape[0]

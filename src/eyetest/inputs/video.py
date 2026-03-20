@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import cv2
@@ -19,3 +20,12 @@ def read_video_frames(path: str | Path, grayscale: bool = True) -> list[np.ndarr
         frames.append(frame)
     capture.release()
     return frames
+
+
+def read_video_fps(path: str | Path, default_fps: float = 25.0) -> float:
+    capture = cv2.VideoCapture(str(path))
+    fps = float(capture.get(cv2.CAP_PROP_FPS))
+    capture.release()
+    if math.isfinite(fps) and fps > 0.0:
+        return fps
+    return default_fps

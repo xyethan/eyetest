@@ -15,7 +15,11 @@ if str(SRC_ROOT) not in sys.path:
 
 
 from eyetest.config import load_calibration_config  # noqa: E402
-from eyetest.pipelines.batch_pipeline import run_batch_pipeline  # noqa: E402
+from eyetest.inputs.camera import EyePairFrame  # noqa: E402
+from eyetest.pipelines.batch_pipeline import (  # noqa: E402
+    run_batch_pipeline,
+    run_batch_pipeline_from_face_frames_with_details,
+)
 
 
 class _FakeSegmenter:
@@ -31,6 +35,17 @@ class _FakeSegmenter:
             "pupil_ellipse": [-1.0, -1.0, -1.0, -1.0, -1.0],
             "iris_ellipse": ellipse,
         }
+
+
+class _FakeEyePairExtractor:
+    def __init__(self, outputs: list[EyePairFrame]) -> None:
+        self._outputs = outputs
+        self._index = 0
+
+    def extract(self, _frame: np.ndarray) -> EyePairFrame:
+        output = self._outputs[self._index]
+        self._index += 1
+        return output
 
 
 class BatchPipelineTests(unittest.TestCase):
@@ -52,6 +67,7 @@ class BatchPipelineTests(unittest.TestCase):
                 [1301.1791583895683, 1083.3823882102965, 112.66681525873844, 131.09218762890433, math.radians(26.97820281982422)],
             ]
         )
+        self.face_frames = [np.zeros((360, 480, 3), dtype=np.uint8) for _ in range(3)]
 
     def test_runs_batch_pipeline_over_paired_eye_frames(self) -> None:
         results = run_batch_pipeline(
@@ -74,6 +90,50 @@ class BatchPipelineTests(unittest.TestCase):
                 right_segmenter=self.right_segmenter,
                 calibration=self.calibration,
             )
+
+    def test_continues_after_eye_detection_failure_in_face_video(self) -> None:
+        extractor = _FakeEyePairExtractor(
+            [
+                EyePairFrame(
+                    frame_bgr=self.face_frames[0],
+                    left_eye_bgr=np.zeros((80, 120, 3), dtype=np.uint8),
+                    right_eye_bgr=np.zeros((80, 120, 3), dtype=np.uint8),
+                    boxes=[(10, 10, 120, 80), (200, 10, 120, 80)],
+                    valid=True,
+                ),
+                EyePairFrame(
+                    frame_bgr=self.face_frames[1],
+                    left_eye_bgr=None,
+                    right_eye_bgr=None,
+                    boxes=[],
+                    valid=False,
+                    error_message="Eye-pair detection failed.",
+                ),
+                EyePairFrame(
+                    frame_bgr=self.face_frames[2],
+                    left_eye_bgr=np.zeros((80, 120, 3), dtype=np.uint8),
+                    right_eye_bgr=np.zeros((80, 120, 3), dtype=np.uint8),
+                    boxes=[(12, 12, 120, 80), (202, 12, 120, 80)],
+                    valid=True,
+                ),
+            ]
+        )
+
+        details = run_batch_pipeline_from_face_frames_with_details(
+            face_frames=self.face_frames,
+            eye_pair_extractor=extractor,
+            left_segmenter=self.left_segmenter,
+            right_segmenter=self.right_segmenter,
+            calibration=self.calibration,
+        )
+
+        self.assertEqual(len(details), 3)
+        self.assertTrue(details[0].gaze.valid)
+        self.assertFalse(details[1].gaze.valid)
+        self.assertEqual(details[1].gaze.error_message, "Eye-pair detection failed.")
+        self.assertTrue(details[2].gaze.valid)
+        self.assertEqual(self.left_segmenter._index, 2)
+        self.assertEqual(self.right_segmenter._index, 2)
 
 
 if __name__ == "__main__":
