@@ -1,0 +1,23 @@
+modes:
+  batch:
+    command: batch
+  realtime:
+    command: realtime
+
+segmentation:
+  backend_root: /mnt/c/Project/EllSeg
+  input_height: 240
+  input_width: 320
+  align_width: true
+  model_path: /mnt/c/Project/EllSeg/logs/ritnet_v3/teyed_large_exp2/checkpoints/checkpoint.pt
+  use_regressed_ellipses: false
+  segment_iris: true
+  segment_pupil: true
+  skip_ransac: false
+
+calibration:
+  path: configs/calibration.default.yaml
+
+outputs:
+  save_overlay: true
+  save_results: true
